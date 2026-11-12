@@ -1,0 +1,153 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource/instrument-serif/400.css';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. Warm neutrals with a single terracotta accent; the "ink"
+ * colour (near-black / near-white) carries primary actions and selection.
+ */
+:root {
+  --canvas: #f6f4f0;
+  --surface: #ffffff;
+  --surface-2: #f1eee8;
+  --surface-3: #e8e3da;
+  --line: #e6e1d8;
+  --line-strong: #d2cabd;
+  --fg: #171615;
+  --muted: #69645c;
+  --subtle: #9a948a;
+  --ink: #171615;
+  --ink-fg: #faf8f5;
+  --brand: #a24b27;
+  --brand-soft: #f6e7de;
+  --warn: #9a5b07;
+  --warn-soft: #fbf1df;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  --ok: #2f6b4f;
+  --photo: #f2efea;
+  --shadow: 0 1px 2px rgb(23 22 21 / 0.04), 0 8px 24px -12px rgb(23 22 21 / 0.12);
+  --shadow-lg: 0 24px 64px -24px rgb(23 22 21 / 0.35);
+  color-scheme: light;
+}
+
+.dark {
+  --canvas: #0f0f0e;
+  --surface: #171716;
+  --surface-2: #1f1e1c;
+  --surface-3: #292825;
+  --line: #2b2a27;
+  --line-strong: #3d3b37;
+  --fg: #f2efea;
+  --muted: #aba59c;
+  --subtle: #7a756d;
+  --ink: #f2efea;
+  --ink-fg: #141413;
+  --brand: #e3916b;
+  --brand-soft: #3b231a;
+  --warn: #e3a64a;
+  --warn-soft: #33260f;
+  --danger: #f2877d;
+  --danger-soft: #3a1714;
+  --ok: #7cc39d;
+  --photo: #e6e2dc;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 24px 64px -24px rgb(0 0 0 / 0.8);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-ink: var(--ink);
+  --color-ink-fg: var(--ink-fg);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ok: var(--ok);
+  --color-photo: var(--photo);
+
+  --shadow-card: var(--shadow);
+  --shadow-float: var(--shadow-lg);
+
+  --animate-fade-in: fade-in 160ms ease-out;
+  --animate-pop-in: pop-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-dialog-in: dialog-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-slide-up: slide-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-canvas text-fg font-sans antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--brand-soft);
+  }
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}
+
+@utility skeleton {
+  background: linear-gradient(90deg, var(--photo) 0%, var(--surface-3) 50%, var(--photo) 100%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

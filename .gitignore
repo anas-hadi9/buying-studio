@@ -1,0 +1,11 @@
+node_modules
+dist
+*.local
+.vite
+coverage
+# Never commit buying data
+*.xlsx
+*.xls
+*.csv
+# Local checks against real buying files
+src/**/*.local.test.ts
