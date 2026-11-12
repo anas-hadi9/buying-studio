@@ -15,7 +15,7 @@ import {
 } from '@dnd-kit/core'
 import { rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ArrowDown, ArrowLeft, ArrowUp, FolderOpen, MoreHorizontal, Pencil, Plus, Rows3, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Download, FolderOpen, MoreHorizontal, Pencil, Plus, Rows3, Trash2, X } from 'lucide-react'
 import { memo, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -33,6 +33,7 @@ import { ProductImage } from '@/features/product/ProductImage'
 import { cn } from '@/lib/cn'
 import { useWorkspace } from '@/stores/workspace'
 import { noun, plural } from '@/lib/plural'
+import { useCollectionFiles } from './useCollectionFiles'
 
 const GROUP_PREFIX = 'group:'
 
@@ -167,6 +168,7 @@ function BoardHeader({ index, collection, summary }: { index: CatalogIndex; coll
   const navigate = useNavigate()
   const [name, setName] = useState(collection.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const { exportFile } = useCollectionFiles()
   const [arrangeBy, setArrangeBy] = useState(index.roles.material ?? '')
   const [arrangeOpen, setArrangeOpen] = useState(false)
   const groupable = index.columns.filter((c) => c.groupable)
@@ -186,6 +188,7 @@ function BoardHeader({ index, collection, summary }: { index: CatalogIndex; coll
             aria-label="Collection name"
             className="w-full rounded-md bg-transparent font-display text-4xl leading-tight tracking-tight outline-none hover:bg-surface-2/60 focus:bg-surface-2/60"
           />
+          {collection.note && <p className="mt-1 max-w-3xl text-sm text-muted">{collection.note}</p>}
           <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted tabular">
             <span>
               <b className="font-semibold text-fg">{summary.products}</b> {noun(summary.products, 'product')}
@@ -250,6 +253,10 @@ function BoardHeader({ index, collection, summary }: { index: CatalogIndex; coll
               </Button>
             </MenuTrigger>
             <MenuContent>
+              <MenuItem onSelect={() => exportFile([collection])}>
+                <Download /> Export collection file
+              </MenuItem>
+              <MenuSeparator />
               <MenuItem destructive onSelect={() => setConfirmDelete(true)}>
                 <Trash2 /> Delete collection
               </MenuItem>

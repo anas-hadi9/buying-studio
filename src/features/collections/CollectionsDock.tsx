@@ -1,8 +1,9 @@
 import { useDndContext, useDroppable } from '@dnd-kit/core'
-import { FolderPlus, GripVertical, Layers, Plus } from 'lucide-react'
+import { Download, FolderPlus, GripVertical, Layers, MoreHorizontal, Plus, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
+import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/overlays'
 import { EmptyState } from '@/components/ui/primitives'
 import type { CatalogIndex } from '@/domain/catalog/buildIndex'
 import { itemCount } from '@/domain/collections'
@@ -12,6 +13,7 @@ import { ProductImage } from '@/features/product/ProductImage'
 import { cn } from '@/lib/cn'
 import { useWorkspace } from '@/stores/workspace'
 import { NewCollectionDialog } from './AddToCollectionMenu'
+import { useCollectionFiles } from './useCollectionFiles'
 import { plural } from '@/lib/plural'
 import { moneyFormatter } from '@/features/catalog/useCatalogView'
 
@@ -21,6 +23,7 @@ export const collectionDropId = (id: string) => `collection:${id}`
 export function CollectionsDock({ index }: { index: CatalogIndex }) {
   const collections = useWorkspace((s) => s.collections)
   const [creating, setCreating] = useState(false)
+  const { exportFile, importFile, canExport } = useCollectionFiles()
   const { active } = useDndContext()
   const dragging = !!active
 
@@ -32,6 +35,21 @@ export function CollectionsDock({ index }: { index: CatalogIndex }) {
         <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setCreating(true)}>
           <Plus /> New
         </Button>
+        <Menu>
+          <MenuTrigger asChild>
+            <Button variant="ghost" size="icon-sm" aria-label="Import or export collections">
+              <MoreHorizontal />
+            </Button>
+          </MenuTrigger>
+          <MenuContent>
+            <MenuItem onSelect={() => void importFile()}>
+              <Upload /> Import collections file…
+            </MenuItem>
+            <MenuItem disabled={!canExport} onSelect={() => exportFile()}>
+              <Download /> Export all collections
+            </MenuItem>
+          </MenuContent>
+        </Menu>
       </div>
       <p className={cn('px-4 pb-3 text-xs text-muted transition-colors', dragging && 'font-medium text-brand')}>
         {dragging ? 'Drop on a collection to add.' : 'Drag products here. Selected products move together.'}

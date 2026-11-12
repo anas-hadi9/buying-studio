@@ -118,6 +118,8 @@ export interface Collection {
   id: string
   lineListId: string
   name: string
+  /** Optional rationale or brief, shown under the collection name. */
+  note?: string
   groups: CollectionGroup[]
   createdAt: string
   updatedAt: string

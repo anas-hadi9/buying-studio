@@ -51,6 +51,8 @@ interface WorkspaceState {
   addToCollection: (collectionId: string, keys: string[]) => Promise<number>
   saveCollection: (collection: Collection) => void
   deleteCollection: (collectionId: string) => Promise<void>
+  /** Adds already-built collections (e.g. from a collections file). */
+  addCollections: (collections: Collection[]) => Promise<void>
 
   savePreset: (name: string) => Promise<FilterPreset | null>
   applyPreset: (preset: FilterPreset) => string[]
@@ -226,6 +228,10 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
           if (latest) void getRepositories().collections.save(latest)
         }, 300),
       )
+    },
+    async addCollections(collections) {
+      set({ collections: [...get().collections, ...collections] })
+      await Promise.all(collections.map((c) => getRepositories().collections.save(c)))
     },
     async deleteCollection(collectionId) {
       clearTimeout(collectionTimers.get(collectionId))

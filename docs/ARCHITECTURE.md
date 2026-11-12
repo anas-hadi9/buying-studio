@@ -177,6 +177,7 @@ buying files and are git-ignored.
 | Multiple brands | Already modelled: `LineList.brand`, library grouped by brand. | — |
 | Authentication / multiple users / shared collections | Auth provider in `app/`; implement `Repositories` over HTTP in `services/storage/http/`; switch it in `services/registry.ts`. | Medium; UI unchanged |
 | Re-import an updated file, keep collections | "Update from file" on a line list: reuse the import wizard, keep the line list id. Collections already key on Item No and keep missing products visible. | Small |
+| Sharing collections | **Built:** collections files (JSON) export from the Collections panel and import into another device's copy of the same line list, matched by product key. A shared server replaces the file exchange later. | — |
 | Saved buying sessions | A session = `{lineListId, collections, selection, view}`; new repository + `features/sessions/`. | Small–medium |
 | Notes / comments / ratings | Repositories keyed by `lineListId + productKey`; panels in the detail dialog and board cards. | Small each |
 | Buy quantities, OTB budget, margin | `domain/buying/` (pure, tested) + quantity inputs on board cards; totals already flow through `summarize()`. Needs quantity/budget data the file lacks. | Medium |
@@ -203,6 +204,9 @@ You asked me to flag over-engineering:
   the brief's objective mentions comparing; it's small.
 - **Excel export is under-scoped** — likely the first thing buyers ask for after building a
   collection. Cheap to add next.
+- **Product photo weight.** Photos in the current file average about 0.5 MB each. The browser
+  caches them, but a thumbnail service (or smaller exports from the image host) would cut
+  bandwidth for large catalogues considerably.
 - **Pricing confidentiality.** Because the app can be hosted publicly, commercial formulas
   never ship in its code; they live in the private pricing file.
 
