@@ -1,5 +1,5 @@
 import { useDndContext, useDroppable } from '@dnd-kit/core'
-import { Download, FolderPlus, GripVertical, Layers, MoreHorizontal, Plus, Upload } from 'lucide-react'
+import { Download, FileSpreadsheet, FolderPlus, GripVertical, Layers, MoreHorizontal, Plus, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import { ProductImage } from '@/features/product/ProductImage'
 import { cn } from '@/lib/cn'
 import { useWorkspace } from '@/stores/workspace'
 import { NewCollectionDialog } from './AddToCollectionMenu'
+import { useExcelExport } from '@/features/export/useExcelExport'
 import { useCollectionFiles } from './useCollectionFiles'
 import { plural } from '@/lib/plural'
 import { moneyFormatter } from '@/features/catalog/useCatalogView'
@@ -24,6 +25,7 @@ export function CollectionsDock({ index }: { index: CatalogIndex }) {
   const collections = useWorkspace((s) => s.collections)
   const [creating, setCreating] = useState(false)
   const { exportFile, importFile, canExport } = useCollectionFiles()
+  const { exportCollections: exportExcel } = useExcelExport()
   const { active } = useDndContext()
   const dragging = !!active
 
@@ -46,7 +48,10 @@ export function CollectionsDock({ index }: { index: CatalogIndex }) {
               <Upload /> Import collections file…
             </MenuItem>
             <MenuItem disabled={!canExport} onSelect={() => exportFile()}>
-              <Download /> Export all collections
+              <Download /> Export all collections (to share)
+            </MenuItem>
+            <MenuItem disabled={!canExport} onSelect={() => void exportExcel()}>
+              <FileSpreadsheet /> Export all collections to Excel
             </MenuItem>
           </MenuContent>
         </Menu>

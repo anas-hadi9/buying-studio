@@ -144,11 +144,12 @@ buying-platform/
     │   ├── collections.ts       Collection operations (add, move, regroup …)
     │   ├── presets.ts           Header-based, cross-file filter presets
     │   ├── import/              Header detection, column typing, roles, quality, sheet scoring
-    │   ├── catalog/             Index (+ derived columns), query/facets, sort/group, season order, formatting
+    │   ├── catalog/             Index (+ derived columns), query/facets, sort/group, season order, formatting, export tables
     │   └── selection/           Buying metrics for any set of products
     ├── services/
     │   ├── registry.ts          Composition root: picks the repository implementation
     │   ├── excel/               Worker, worker client, hidden-sheet reader
+    │   ├── xlsx.ts              Excel writer for exports (inline strings, links, formats; loaded on demand)
     │   └── storage/             Repository interfaces + IndexedDB / in-memory implementations
     ├── stores/                  Zustand: preferences, settings, library, workspace, ui
     ├── features/
@@ -182,7 +183,8 @@ buying files and are git-ignored.
 | Notes / comments / ratings | Repositories keyed by `lineListId + productKey`; panels in the detail dialog and board cards. | Small each |
 | Buy quantities, OTB budget, margin | `domain/buying/` (pure, tested) + quantity inputs on board cards; totals already flow through `summarize()`. Needs quantity/budget data the file lacks. | Medium |
 | Size-level buying | Join the `Barcodes` sheet on Item No at import (second sheet in the wizard). | Medium |
-| Excel / PDF export | `services/export/` (write-excel-file for xlsx; print stylesheet or PDF lib for line sheets) over a collection or the filtered list. | Small |
+| Excel export | **Built:** the products shown (filters, search and sort applied), the selection, one collection or all collections. Every column, calculated prices as plain numbers, clickable photo links; collections add a summary sheet. Our own small writer on `fflate` (no library offered links + filters + frozen headers). | — |
+| Photos in Excel / PDF line sheets | Embed resized photos in the Excel export (the image host allows cross-origin reads), or a print stylesheet / PDF for line sheets. | Small–medium |
 | Purchase orders, approval workflow | Needs the backend (state machine, audit trail). | Large |
 | Dashboard analytics | `features/dashboard/` reading the same catalog index. | Medium |
 
@@ -202,8 +204,8 @@ You asked me to flag over-engineering:
 - **Virtual scrolling: justified** for "thousands of products" with images.
 - **Compare** (2–4 selected products side by side, differences highlighted) was included because
   the brief's objective mentions comparing; it's small.
-- **Excel export is under-scoped** — likely the first thing buyers ask for after building a
-  collection. Cheap to add next.
+- **Excel export** was the first thing asked for after collections; it's built (see roadmap).
+  Photos are links, not embedded pictures, to keep files small.
 - **Product photo weight.** Photos in the current file are full-size originals: typically
   about 0.4 MB and 1500×2090 px, up to 6 MB and 24 MP. The photo loader (`ProductImage`)
   works around this. It only downloads photos on screen or half a screen ahead, six at a time

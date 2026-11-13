@@ -1,10 +1,11 @@
-import { Eye, EyeOff, FolderPlus, GitCompareArrows, X } from 'lucide-react'
+import { Eye, EyeOff, FileSpreadsheet, FolderPlus, GitCompareArrows, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip } from '@/components/ui/primitives'
 import type { CatalogIndex } from '@/domain/catalog/buildIndex'
 import { rowsForKeys, summarize } from '@/domain/selection/summary'
 import { AddToCollectionMenu } from '@/features/collections/AddToCollectionMenu'
+import { useExcelExport } from '@/features/export/useExcelExport'
 import { useWorkspace } from '@/stores/workspace'
 import { CompareDialog, MAX_COMPARE } from './CompareDialog'
 import { plural } from '@/lib/plural'
@@ -26,6 +27,7 @@ export function SelectionBar({ index }: { index: CatalogIndex }) {
   const setSelectedOnly = useWorkspace((s) => s.setSelectedOnly)
   const clearSelection = useWorkspace((s) => s.clearSelection)
   const [comparing, setComparing] = useState(false)
+  const { exportProducts } = useExcelExport()
 
   const keys = useMemo(() => [...selection], [selection])
   const summary = useMemo(() => summarize(index, rowsForKeys(index, keys)), [index, keys])
@@ -90,6 +92,16 @@ export function SelectionBar({ index }: { index: CatalogIndex }) {
                 <GitCompareArrows /> Compare
               </Button>
             </span>
+          </Tooltip>
+          <Tooltip content="Export selected products to Excel" side="top">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-ink-fg/80 hover:bg-ink-fg/10 hover:text-ink-fg"
+              onClick={() => void exportProducts(rowsForKeys(index, keys).sort((a, b) => a - b), `${plural(summary.products, 'selected product')}`)}
+            >
+              <FileSpreadsheet /> Excel
+            </Button>
           </Tooltip>
           <Tooltip content="Clear selection" side="top">
             <Button size="icon-sm" variant="ghost" className="text-ink-fg/70 hover:bg-ink-fg/10 hover:text-ink-fg" onClick={clearSelection} aria-label="Clear selection">

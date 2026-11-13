@@ -15,7 +15,7 @@ import {
 } from '@dnd-kit/core'
 import { rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ArrowDown, ArrowLeft, ArrowUp, Download, FolderOpen, MoreHorizontal, Pencil, Plus, Rows3, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Download, FileSpreadsheet, FolderOpen, MoreHorizontal, Pencil, Plus, Rows3, Trash2, X } from 'lucide-react'
 import { memo, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -33,6 +33,7 @@ import { ProductImage } from '@/features/product/ProductImage'
 import { cn } from '@/lib/cn'
 import { useWorkspace } from '@/stores/workspace'
 import { noun, plural } from '@/lib/plural'
+import { useExcelExport } from '@/features/export/useExcelExport'
 import { useCollectionFiles } from './useCollectionFiles'
 
 const GROUP_PREFIX = 'group:'
@@ -169,6 +170,7 @@ function BoardHeader({ index, collection, summary }: { index: CatalogIndex; coll
   const [name, setName] = useState(collection.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const { exportFile } = useCollectionFiles()
+  const { exportCollections: exportExcel } = useExcelExport()
   const [arrangeBy, setArrangeBy] = useState(index.roles.material ?? '')
   const [arrangeOpen, setArrangeOpen] = useState(false)
   const groupable = index.columns.filter((c) => c.groupable)
@@ -253,8 +255,11 @@ function BoardHeader({ index, collection, summary }: { index: CatalogIndex; coll
               </Button>
             </MenuTrigger>
             <MenuContent>
+              <MenuItem onSelect={() => void exportExcel([collection])}>
+                <FileSpreadsheet /> Export to Excel
+              </MenuItem>
               <MenuItem onSelect={() => exportFile([collection])}>
-                <Download /> Export collection file
+                <Download /> Export collection file (to share)
               </MenuItem>
               <MenuSeparator />
               <MenuItem destructive onSelect={() => setConfirmDelete(true)}>

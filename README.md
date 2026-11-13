@@ -13,6 +13,7 @@ and work with it as a visual catalogue instead of a spreadsheet:
 - **Selection** that survives filtering and reloads, with a running summary: products, styles, retail value, average.
 - **Product detail view** with every field, click-to-zoom and ←/→ navigation. Compare 2–4 products side by side.
 - **Collections.** Drag products (or the whole selection) from the catalogue into collections. On a collection's board, reorder products, move them between groups, or arrange the groups by any column. Share collections as a file (Collections panel → ⋯ → Export / Import); products are matched by their key, e.g. Item No.
+- **Excel export** of the products shown, the selection, a collection or all collections: every column, calculated prices as plain numbers (never formulas), clickable photo links, frozen and filterable headers.
 
 Everything runs in the browser. Imported data, collections and settings are stored on the
 buyer's device (IndexedDB); nothing is uploaded.

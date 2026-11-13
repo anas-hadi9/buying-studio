@@ -1,4 +1,5 @@
-import { FileLock2, X } from 'lucide-react'
+import { FileLock2, FileSpreadsheet, X } from 'lucide-react'
+import { Tooltip } from '@/components/ui/primitives'
 import type { CatalogIndex } from '@/domain/catalog/buildIndex'
 import { formatNumber } from '@/domain/catalog/format'
 import { isFilterActive, type ColumnFilter } from '@/domain/catalog/query'
@@ -19,8 +20,16 @@ function describe(index: CatalogIndex, columnId: string, f: ColumnFilter): strin
   return `≤ ${fmt(f.max!)}`
 }
 
+interface ResultsBarProps {
+  index: CatalogIndex
+  matchCount: number
+  styleCount: number
+  /** Exports the products shown (filters, search and sort applied). */
+  onExport?: () => void
+}
+
 /** Result count plus removable chips for every active filter. */
-export function ResultsBar({ index, matchCount, styleCount }: { index: CatalogIndex; matchCount: number; styleCount: number }) {
+export function ResultsBar({ index, matchCount, styleCount, onExport }: ResultsBarProps) {
   const filters = useWorkspace((s) => s.view.filters)
   const search = useWorkspace((s) => s.view.search)
   const selectedOnly = useWorkspace((s) => s.selectedOnly)
@@ -43,15 +52,29 @@ export function ResultsBar({ index, matchCount, styleCount }: { index: CatalogIn
       {active.map(([id, f]) => (
         <Chip key={id} label={index.byId.get(id)!.def.header} value={describe(index, id, f)} onRemove={() => setFilter(id, null)} />
       ))}
-      {index.roles.price && !index.roles.fullPrice && (
-        <button
-          type="button"
-          onClick={() => openSettings('pricing')}
-          className="order-last ml-auto inline-flex items-center gap-1.5 rounded-full bg-warn-soft px-2.5 py-1 text-xs font-medium text-warn hover:opacity-80"
-        >
-          <FileLock2 className="size-3.5" /> Full prices hidden — load pricing file
-        </button>
-      )}
+      <div className="order-last ml-auto flex items-center gap-2">
+        {index.roles.price && !index.roles.fullPrice && (
+          <button
+            type="button"
+            onClick={() => openSettings('pricing')}
+            className="inline-flex items-center gap-1.5 rounded-full bg-warn-soft px-2.5 py-1 text-xs font-medium text-warn hover:opacity-80"
+          >
+            <FileLock2 className="size-3.5" /> Full prices hidden — load pricing file
+          </button>
+        )}
+        {onExport && (
+          <Tooltip content="Download the products shown, with every column, as an Excel file">
+            <button
+              type="button"
+              onClick={onExport}
+              disabled={matchCount === 0}
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-medium text-muted shadow-sm hover:border-line-strong hover:text-fg disabled:opacity-50"
+            >
+              <FileSpreadsheet className="size-3.5" /> Export to Excel
+            </button>
+          </Tooltip>
+        )}
+      </div>
       {(active.length > 0 || search) && (
         <button type="button" onClick={clearFilters} className="ml-1 text-xs font-medium text-muted underline-offset-4 hover:text-fg hover:underline">
           Clear all

@@ -8,6 +8,8 @@ import type { CatalogIndex } from '@/domain/catalog/buildIndex'
 import { summarize } from '@/domain/selection/summary'
 import { announceAdded } from '@/features/collections/AddToCollectionMenu'
 import { CollectionsDock, NEW_COLLECTION_DROP_ID } from '@/features/collections/CollectionsDock'
+import { useExcelExport } from '@/features/export/useExcelExport'
+import { plural } from '@/lib/plural'
 import { ResultsBar } from '@/features/filters/ResultsBar'
 import { FilterSidebar } from '@/features/filters/FilterSidebar'
 import { ProductDetailDialog } from '@/features/product/ProductDetailDialog'
@@ -69,6 +71,7 @@ function Catalog({ index }: { index: CatalogIndex }) {
   const addToCollection = useWorkspace((s) => s.addToCollection)
   const createCollection = useWorkspace((s) => s.createCollection)
   const { result, rows, groups, keys } = useCatalogView(index)
+  const { exportProducts } = useExcelExport()
   const styleCount = useMemo(() => summarize(index, rows).styles, [index, rows])
   const [dragging, setDragging] = useState<DragData | null>(null)
 
@@ -108,7 +111,17 @@ function Catalog({ index }: { index: CatalogIndex }) {
         {filtersOpen && <FilterSidebar index={index} result={result} />}
         <main className="flex min-w-0 flex-1 flex-col">
           <CatalogToolbar index={index} />
-          <ResultsBar index={index} matchCount={result.matchCount} styleCount={styleCount} />
+          <ResultsBar
+            index={index}
+            matchCount={result.matchCount}
+            styleCount={styleCount}
+            onExport={() =>
+              void exportProducts(
+                keys.map((k) => index.keyToRow.get(k)!),
+                result.matchCount < index.rowCount ? plural(keys.length, 'product') : 'all products',
+              )
+            }
+          />
           <ProductGrid index={index} rows={rows} groups={groups} keys={keys} collectionCounts={collectionCounts} />
         </main>
         {dockOpen && <CollectionsDock index={index} />}

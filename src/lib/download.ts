@@ -1,6 +1,11 @@
 /** Saves text as a file in the browser's downloads. */
 export function downloadText(fileName: string, text: string, type = 'application/json') {
-  const url = URL.createObjectURL(new Blob([text], { type }))
+  downloadBlob(fileName, new Blob([text], { type }))
+}
+
+/** Saves a blob (e.g. a generated Excel file) in the browser's downloads. */
+export function downloadBlob(fileName: string, blob: Blob) {
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = fileName

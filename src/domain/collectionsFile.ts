@@ -4,7 +4,7 @@
  * their key (e.g. Item No), so a file built on one device opens on another
  * that imported the same line list.
  */
-import { createId } from './text'
+import { createId, safeFileBase } from './text'
 import type { Collection, LineList } from './types'
 
 export const COLLECTIONS_FILE_FORMAT = 'buying-studio-collections'
@@ -116,17 +116,7 @@ export function importCollections(
   return { collections, products, missing }
 }
 
-/**
- * File name like "Network SS27 - collections.json". Only letters, digits and
- * plain punctuation are kept: browsers drop the whole name (saving the file as
- * "download") when it contains characters such as "·".
- */
+/** File name like "Network SS27 - collections.json". */
 export function collectionsFileName(lineListName: string, collectionName?: string): string {
-  const base = [lineListName, collectionName]
-    .filter(Boolean)
-    .join(' - ')
-    .replace(/[^\p{L}\p{N} _().,&'-]+/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-  return `${base || 'collections'} - collections.json`
+  return `${safeFileBase([lineListName, collectionName]) || 'collections'} - collections.json`
 }
