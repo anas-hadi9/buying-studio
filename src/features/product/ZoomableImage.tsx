@@ -30,7 +30,7 @@ export function ZoomableImage({ src, alt }: { src: string | null; alt: string })
   return (
     <div ref={ref} className="group relative size-full overflow-hidden bg-photo">
       <div className="size-full transition-transform duration-300 ease-out" style={{ transform: zoomed ? `scale(${ZOOM})` : undefined, transformOrigin: origin }}>
-        <ProductImage src={src} alt={alt} eager className="size-full" imgClassName="p-[5%]" />
+        <ProductImage src={src} alt={alt} eager full className="size-full" imgClassName="p-[5%]" />
       </div>
       {src && (
         <>

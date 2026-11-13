@@ -1,11 +1,16 @@
 import { ImageOff, RotateCw } from 'lucide-react'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { photoWidth, resizedPhotoUrl } from '@/domain/photoResizer'
 import { cn } from '@/lib/cn'
 import { LoadQueue } from '@/lib/loadQueue'
+import { useSettings } from '@/stores/settings'
 
 /*
  * Line-list photos are often full-size originals: typically around 0.4 MB,
  * some over 5 MB. This loader keeps that weight manageable:
+ *  - cards show a small copy from the photo resizer (Settings → Photos),
+ *    ~50× lighter; the original is used if the copy fails, and the product
+ *    view always shows the original (with the small copy as an instant preview);
  *  - only photos on screen (or half a screen ahead) download, at most
  *    DOWNLOAD_SLOTS at a time, in the order they came into view;
  *  - photos scrolled past quickly never start, and leaving cancels a download;
@@ -13,7 +18,7 @@ import { LoadQueue } from '@/lib/loadQueue'
  *  - a photo that still fails shows "Retry". It is tried again automatically
  *    once the device reconnects, or when its card is shown again after a minute.
  */
-const DOWNLOAD_SLOTS = 6
+const DOWNLOAD_SLOTS = 10
 /** How long a photo must stay on screen before it joins the line (skips fast scrolls). */
 const SETTLE_MS = 150
 const ATTEMPTS = 3
@@ -25,7 +30,10 @@ const FAILURE_TTL = 60_000
 const queue = new LoadQueue(DOWNLOAD_SLOTS)
 // Remember outcomes across mounts: virtualised cards remount on scroll, and a
 // photo that already loaded (browser-cached) shouldn't wait in line again.
+/** Every address (small copy or original) that loaded. */
 const loaded = new Set<string>()
+/** Original address → the small copy that loaded for it. */
+const smallCopy = new Map<string, string>()
 const failed = new Map<string, number>()
 const preloading = new Set<string>()
 
@@ -124,6 +132,8 @@ interface ProductImageProps {
   compact?: boolean
   /** Load now and ahead of other photos (e.g. the product being viewed). */
   eager?: boolean
+  /** Show the original photo, not a small copy (e.g. the zoomable product view). */
+  full?: boolean
 }
 
 /**
@@ -138,9 +148,23 @@ export const ProductImage = memo(function ProductImage(props: ProductImageProps)
       </div>
     )
   }
-  // Keyed by src so a different photo always starts from a clean state.
-  return <Photo key={props.src} {...props} src={props.src} />
+  return <ResizedPhoto {...props} src={props.src} />
 })
+
+function ResizedPhoto(props: ProductImageProps & { src: string }) {
+  const resizer = useSettings((s) => s.settings.photoResizer)
+  // The product view shows the original, with a small copy as an instant preview.
+  const preview = props.full ? (smallCopy.get(props.src) ?? (resizer ? resizedPhotoUrl(resizer, props.src, 640) : null)) : null
+  // Keyed so a different photo (or resizer) always starts from a clean state.
+  return <Photo key={`${props.src}|${resizer ?? ''}`} {...props} resizer={props.full ? null : resizer} previewUrl={preview} />
+}
+
+/** Addresses to try, best first: a small copy sized for the element, then the original. */
+function candidates(src: string, el: HTMLElement | null, resizer: string | null, compact: boolean): string[] {
+  if (!resizer) return [src]
+  const width = photoWidth(el?.clientWidth || 300, typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1, compact)
+  return [resizedPhotoUrl(resizer, src, width), src]
+}
 
 /**
  * Removing an <img> doesn't stop its download, so a photo whose card goes away
@@ -158,14 +182,36 @@ const cancelUnfinished = (img: HTMLImageElement | null) => {
 
 type Phase = 'waiting' | 'loading' | 'retrying' | 'loaded' | 'failed'
 
-function Photo({ src, alt, className, imgClassName, compact, eager }: ProductImageProps & { src: string }) {
+/** What a remounted card can show straight away. */
+function alreadyLoaded(src: string, full: boolean): string | null {
+  if (full) return loaded.has(src) ? src : null
+  return smallCopy.get(src) ?? (loaded.has(src) ? src : null)
+}
+
+function Photo({
+  src,
+  alt,
+  className,
+  imgClassName,
+  compact,
+  eager,
+  full,
+  resizer,
+  previewUrl,
+}: ProductImageProps & { src: string; resizer: string | null; previewUrl: string | null }) {
   const ref = useRef<HTMLDivElement>(null)
   const slot = useRef<(() => void) | null>(null)
-  const [phase, setPhase] = useState<Phase>(() => (loaded.has(src) ? 'loaded' : failedRecently(src) ? 'failed' : 'waiting'))
+  const tries = useRef<string[] | null>(null)
+  const tryIndex = useRef(0)
+  const [url, setUrl] = useState<string | null>(() => alreadyLoaded(src, !!full))
+  const [phase, setPhase] = useState<Phase>(() => (url ? 'loaded' : failedRecently(src) ? 'failed' : 'waiting'))
   /** Failures in the current round of attempts. */
   const [failures, setFailures] = useState(0)
   /** Remounts the <img> so a retry is a fresh request. */
   const [attempt, setAttempt] = useState(0)
+  // The product view shows the small copy while the original arrives (or if it can't).
+  const [previewFailed, setPreviewFailed] = useState(false)
+  const preview = phase !== 'loaded' && !previewFailed ? previewUrl : null
 
   const freeSlot = useCallback(() => {
     slot.current?.()
@@ -175,19 +221,27 @@ function Photo({ src, alt, className, imgClassName, compact, eager }: ProductIma
 
   const retry = useCallback(() => {
     failed.delete(src)
+    tryIndex.current = 0
     setFailures(0)
     setAttempt((a) => a + 1)
     setPhase('waiting')
   }, [src])
 
+  // Addresses to try, worked out once the element is on the page (its width picks the size).
+  useLayoutEffect(() => {
+    tries.current = candidates(src, ref.current, resizer, !!compact)
+  }, [src, resizer, compact])
+
   // Waiting: hold a place in the download line while the photo is near the screen.
   useEffect(() => {
     if (phase !== 'waiting') return
+    const urls = tries.current ?? [src]
     let granted = false
     const ask = () => {
       slot.current ??= queue.request(
         () => {
           granted = true
+          setUrl(urls[tryIndex.current])
           setPhase('loading')
         },
         { urgent: eager },
@@ -211,7 +265,7 @@ function Photo({ src, alt, className, imgClassName, compact, eager }: ProductIma
       stop()
       leave()
     }
-  }, [phase, eager, freeSlot])
+  }, [phase, eager, freeSlot, src])
 
   useEffect(() => {
     if (phase !== 'loading') return
@@ -237,29 +291,53 @@ function Photo({ src, alt, className, imgClassName, compact, eager }: ProductIma
     return () => window.removeEventListener('online', retry)
   }, [phase, retry])
 
+  // With a preview on screen, the original replaces it directly (no fade, no gap).
+  const fadeIn = !previewUrl || previewFailed
   return (
     <div ref={ref} className={cn('relative overflow-hidden bg-photo', className)}>
-      {phase !== 'loaded' && phase !== 'failed' && <div className="skeleton absolute inset-0" aria-hidden />}
-      {phase === 'failed' && <ImageFallback compact={compact} onRetry={retry} />}
-      {(phase === 'loading' || phase === 'loaded') && (
+      {phase !== 'loaded' && phase !== 'failed' && !preview && <div className="skeleton absolute inset-0" aria-hidden />}
+      {preview && (
         <img
-          key={attempt}
-          src={src}
+          src={preview}
+          alt=""
+          aria-hidden
+          referrerPolicy="no-referrer"
+          draggable={false}
+          onError={() => setPreviewFailed(true)}
+          className={cn('absolute inset-0 size-full object-contain mix-blend-multiply', imgClassName)}
+        />
+      )}
+      {phase === 'failed' && !preview && <ImageFallback compact={compact} onRetry={retry} />}
+      {(phase === 'loading' || phase === 'loaded') && url && (
+        <img
+          key={`${url}#${attempt}`}
+          src={url}
           alt={alt}
           decoding="async"
           fetchPriority={eager ? 'high' : undefined}
           referrerPolicy="no-referrer"
           draggable={false}
           ref={cancelUnfinished}
-          onLoad={() => {
-            loaded.add(src)
+          onLoad={(e) => {
+            loaded.add(url)
+            if (url !== src) smallCopy.set(src, url)
             failed.delete(src)
             freeSlot()
-            setPhase('loaded')
+            // Show it once decoded, so swapping out the preview never flashes.
+            void e.currentTarget
+              .decode()
+              .catch(() => {})
+              .finally(() => setPhase('loaded'))
           }}
           onError={(e) => {
             if (!e.currentTarget.hasAttribute('src')) return
             freeSlot()
+            // The small copy failed (e.g. the resizer is unreachable): use the original.
+            if (tries.current && tryIndex.current < tries.current.length - 1) {
+              tryIndex.current++
+              setPhase('waiting')
+              return
+            }
             if (failures + 1 < ATTEMPTS) {
               setFailures(failures + 1)
               setPhase('retrying')
@@ -269,7 +347,8 @@ function Photo({ src, alt, className, imgClassName, compact, eager }: ProductIma
             }
           }}
           className={cn(
-            'absolute inset-0 size-full object-contain mix-blend-multiply transition-opacity duration-300',
+            'absolute inset-0 size-full object-contain mix-blend-multiply',
+            fadeIn && 'transition-opacity duration-300',
             phase === 'loaded' ? 'opacity-100' : 'opacity-0',
             imgClassName,
           )}

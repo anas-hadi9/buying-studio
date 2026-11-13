@@ -3,9 +3,10 @@ import { useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/overlays'
-import { Input } from '@/components/ui/primitives'
+import { Checkbox, Input } from '@/components/ui/primitives'
 import { collectCodes, DEFAULT_MATERIAL_NAMES } from '@/domain/materials'
 import { EMPTY_PRICING, parsePricingFile, priceFieldHeader } from '@/domain/pricing'
+import { DEFAULT_PHOTO_RESIZER, isPhotoResizer } from '@/domain/photoResizer'
 import { linkHost, productLink, toLinkTemplate } from '@/domain/productLink'
 import { colourCode } from '@/domain/catalog/colourways'
 import { cn } from '@/lib/cn'
@@ -19,7 +20,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="Settings" description="Saved on this device only and applied to every line list." className="h-[min(640px,90dvh)] max-w-2xl">
       <div className="flex gap-1 border-b border-line px-6">
-        {(['pricing', 'materials', 'website'] as SettingsTab[]).map((t) => (
+        {(['pricing', 'materials', 'website', 'photos'] as SettingsTab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -33,11 +34,12 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
       {open && tab === 'pricing' && <PricingFileForm onDone={() => onOpenChange(false)} />}
       {open && tab === 'materials' && <MaterialsForm onDone={() => onOpenChange(false)} />}
       {open && tab === 'website' && <WebsiteLinkForm onDone={() => onOpenChange(false)} />}
+      {open && tab === 'photos' && <PhotosForm onDone={() => onOpenChange(false)} />}
     </Dialog>
   )
 }
 
-const TAB_LABELS: Record<SettingsTab, string> = { pricing: 'Pricing', materials: 'Material codes', website: 'Website link' }
+const TAB_LABELS: Record<SettingsTab, string> = { pricing: 'Pricing', materials: 'Material codes', website: 'Website link', photos: 'Photos' }
 
 const dateTime = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
@@ -330,6 +332,76 @@ function WebsiteLinkForm({ onDone }: { onDone: () => void }) {
         {error && <p className="text-xs text-danger">{error}</p>}
         <p className="text-[11px] text-subtle">Saved on this device. Advanced: write {'{key}'}, {'{style}'} or {'{code}'} (colour code) where they belong.</p>
       </form>
+
+      <div className="flex justify-end">
+        <Button variant="ghost" onClick={onDone}>
+          Close
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/** Small photo copies for fast browsing; originals stay one click away. */
+function PhotosForm({ onDone }: { onDone: () => void }) {
+  const resizer = useSettings((s) => s.settings.photoResizer)
+  const update = useSettings((s) => s.update)
+  const [draft, setDraft] = useState(resizer ?? DEFAULT_PHOTO_RESIZER)
+  const [error, setError] = useState<string | null>(null)
+  const custom = resizer !== null && resizer !== DEFAULT_PHOTO_RESIZER
+
+  return (
+    <div className="space-y-5 p-6">
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-4">
+        <Checkbox className="mt-0.5" checked={resizer !== null} onCheckedChange={(on) => void update({ photoResizer: on ? DEFAULT_PHOTO_RESIZER : null })} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium">Load small copies of photos</span>
+          <span className="mt-1 block text-xs leading-relaxed text-muted">
+            Line-list photos are full-size originals (often 0.4 MB or more each). Cards show copies about 50 times lighter, made and cached by{' '}
+            <a href="https://wsrv.nl" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+              wsrv.nl
+            </a>
+            , a free image service; it sees the photo links. The product view, its zoom and “Original image” always use the full photo. If a copy can’t be
+            made, the original is shown instead.
+          </span>
+        </span>
+      </label>
+
+      <details open={custom} className="text-sm">
+        <summary className="cursor-pointer text-xs font-medium text-muted hover:text-fg">Advanced: use another resizing service</summary>
+        <form
+          className="mt-3 space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!isPhotoResizer(draft)) {
+              setError('Enter a web address containing {url} (the original photo) and, ideally, {width}.')
+              return
+            }
+            setError(null)
+            void update({ photoResizer: draft.trim() })
+            toast.success('Photo resizer saved')
+          }}
+        >
+          <div className="flex gap-2">
+            <Input value={draft} onChange={(e) => setDraft(e.target.value)} aria-label="Photo resizer address" className="flex-1 font-mono text-xs" />
+            <Button type="submit" size="sm">
+              Save
+            </Button>
+          </div>
+          {error && <p className="text-xs text-danger">{error}</p>}
+          <p className="text-[11px] text-subtle">
+            For example your own server, once photos are hosted there. {'{url}'} is the original photo address, {'{width}'} the width in pixels.{' '}
+            {custom && (
+              <button type="button" className="font-medium text-muted underline-offset-2 hover:text-fg hover:underline" onClick={() => {
+                setDraft(DEFAULT_PHOTO_RESIZER)
+                void update({ photoResizer: DEFAULT_PHOTO_RESIZER })
+              }}>
+                Reset to wsrv.nl
+              </button>
+            )}
+          </p>
+        </form>
+      </details>
 
       <div className="flex justify-end">
         <Button variant="ghost" onClick={onDone}>

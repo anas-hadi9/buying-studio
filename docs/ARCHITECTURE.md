@@ -208,12 +208,17 @@ You asked me to flag over-engineering:
 - **Excel export** was the first thing asked for after collections; it's built (see roadmap).
   Photos are links, not embedded pictures, to keep files small.
 - **Product photo weight.** Photos in the current file are full-size originals: typically
-  about 0.4 MB and 1500×2090 px, up to 6 MB and 24 MP. The photo loader (`ProductImage`)
-  works around this. It only downloads photos on screen or half a screen ahead, six at a time
-  in the order they appear. Fast scrolls are skipped, and a card leaving mid-download cancels
-  it. Failures are retried twice, then show "Retry". The real fix is thumbnails, either
-  exported by the image host or produced by a resizing service; that would cut bandwidth and
-  memory about 20×.
+  about 0.4 MB and 1500×2090 px, up to 6 MB and 24 MP. A screen of cards was ~17 MB.
+  Cards now load small copies from a resizing service (default wsrv.nl, free and
+  Cloudflare-cached; Settings → Photos to turn off or point at your own server). A card copy
+  is ~7–8 KB (about 50× lighter), in a few shared widths (320/640/960) so buyers share the
+  cache. A copy that can't be made falls back to the original. The product view and zoom
+  always show the original, with the small copy as an instant preview. On top, the loader
+  (`ProductImage`) downloads only photos on screen or half a screen ahead, 10 at a time in
+  the order they appear. It skips fast scrolls, cancels downloads for cards that leave, and
+  retries failures twice before showing "Retry". Trade-off: the resizing service sees the
+  photo addresses (they are public on the image host already). Self-hosting later means
+  setting the resizer address to your own server.
 - **Pricing confidentiality.** Because the app can be hosted publicly, commercial formulas
   never ship in its code; they live in the private pricing file.
 

@@ -1,4 +1,5 @@
 import { DEFAULT_MATERIAL_NAMES } from './materials'
+import { DEFAULT_PHOTO_RESIZER } from './photoResizer'
 import { EMPTY_PRICING, type PricingSettings } from './pricing'
 
 /** Organisation-level settings. Device-local today; server-backed later. */
@@ -9,12 +10,15 @@ export interface AppSettings {
   materialNames: Record<string, string>
   /** Link to a product on the brand website, with {key}/{style}/{code} placeholders. */
   productLink: string | null
+  /** Address of small photo copies, with {url}/{width} placeholders; null = originals only. */
+  photoResizer: string | null
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   pricing: EMPTY_PRICING,
   materialNames: DEFAULT_MATERIAL_NAMES,
   productLink: null,
+  photoResizer: DEFAULT_PHOTO_RESIZER,
 }
 
 /**
@@ -28,5 +32,7 @@ export function withDefaults(saved: Partial<AppSettings> | undefined): AppSettin
     pricing: { ...EMPTY_PRICING, ...pricing },
     materialNames: saved?.materialNames ?? DEFAULT_MATERIAL_NAMES,
     productLink: typeof saved?.productLink === 'string' ? saved.productLink : null,
+    // Older saved settings have no entry: they get the default (small copies on).
+    photoResizer: saved?.photoResizer === undefined ? DEFAULT_PHOTO_RESIZER : saved.photoResizer,
   }
 }
