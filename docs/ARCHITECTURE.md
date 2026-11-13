@@ -204,9 +204,13 @@ You asked me to flag over-engineering:
   the brief's objective mentions comparing; it's small.
 - **Excel export is under-scoped** — likely the first thing buyers ask for after building a
   collection. Cheap to add next.
-- **Product photo weight.** Photos in the current file average about 0.5 MB each. The browser
-  caches them, but a thumbnail service (or smaller exports from the image host) would cut
-  bandwidth for large catalogues considerably.
+- **Product photo weight.** Photos in the current file are full-size originals: typically
+  about 0.4 MB and 1500×2090 px, up to 6 MB and 24 MP. The photo loader (`ProductImage`)
+  works around this. It only downloads photos on screen or half a screen ahead, six at a time
+  in the order they appear. Fast scrolls are skipped, and a card leaving mid-download cancels
+  it. Failures are retried twice, then show "Retry". The real fix is thumbnails, either
+  exported by the image host or produced by a resizing service; that would cut bandwidth and
+  memory about 20×.
 - **Pricing confidentiality.** Because the app can be hosted publicly, commercial formulas
   never ship in its code; they live in the private pricing file.
 

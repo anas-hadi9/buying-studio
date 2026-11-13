@@ -126,7 +126,7 @@ function Board({ index, collection }: { index: CatalogIndex; collection: Collect
   return (
     <div className="flex h-full flex-col">
       <BoardHeader index={index} collection={collection} summary={summary} />
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div data-image-root className="min-h-0 flex-1 overflow-auto">
         {allKeys.length === 0 && (
           <EmptyState
             icon={<Rows3 />}

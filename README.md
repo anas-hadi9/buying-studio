@@ -4,7 +4,7 @@ Internal collection & buying platform for the buying team. Import an OTB / line-
 and work with it as a visual catalogue instead of a spreadsheet:
 
 - **Import any layout.** All sheets are scored and the product sheet is picked automatically. Headers, column types, the image column and field mapping are detected, and a data-quality report is shown before import.
-- **Visual catalogue.** Lazy-loaded product images, virtual scrolling, light and dark mode.
+- **Visual catalogue.** Polite photo loading (on-screen first, a few at a time, automatic retries), virtual scrolling, light and dark mode.
 - **Filters from every column.** Multi-select with value search, ranges for numbers, month buckets for dates. Counts show what each option would match. Presets can be saved and reused on next season's file.
 - **Global search across every column.** It ignores accents and Turkish letters, so `istanbul` finds `İSTANBUL`.
 - **Sorting** by any column; season codes sort in season order.

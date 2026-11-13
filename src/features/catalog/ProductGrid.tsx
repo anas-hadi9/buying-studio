@@ -130,7 +130,7 @@ export function ProductGrid({ index, rows, groups, keys, collectionCounts }: Pro
   }
 
   return (
-    <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto [overflow-anchor:none]">
+    <div ref={scrollRef} data-image-root className="min-h-0 flex-1 overflow-auto [overflow-anchor:none]">
       <div style={{ height: virtualizer.getTotalSize() }} className="relative w-full">
         {virtualizer.getVirtualItems().map((v) => {
           const item = items[v.index]
