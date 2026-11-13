@@ -1,4 +1,4 @@
-import { FileLock2, RotateCcw, ShieldCheck, Trash2, Upload } from 'lucide-react'
+import { ExternalLink, FileLock2, Globe, RotateCcw, ShieldCheck, Trash2, Upload } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -6,6 +6,8 @@ import { Dialog } from '@/components/ui/overlays'
 import { Input } from '@/components/ui/primitives'
 import { collectCodes, DEFAULT_MATERIAL_NAMES } from '@/domain/materials'
 import { EMPTY_PRICING, parsePricingFile, priceFieldHeader } from '@/domain/pricing'
+import { linkHost, productLink, toLinkTemplate } from '@/domain/productLink'
+import { colourCode } from '@/domain/catalog/colourways'
 import { cn } from '@/lib/cn'
 import { useSettings } from '@/stores/settings'
 import { useUi, type SettingsTab } from '@/stores/ui'
@@ -17,21 +19,25 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="Settings" description="Saved on this device only and applied to every line list." className="h-[min(640px,90dvh)] max-w-2xl">
       <div className="flex gap-1 border-b border-line px-6">
-        {(['pricing', 'materials'] as SettingsTab[]).map((t) => (
+        {(['pricing', 'materials', 'website'] as SettingsTab[]).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
             className={cn('-mb-px border-b-2 px-3 py-2.5 text-sm font-medium', tab === t ? 'border-ink text-fg' : 'border-transparent text-muted hover:text-fg')}
           >
-            {t === 'pricing' ? 'Pricing' : 'Material codes'}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
-      {open && (tab === 'pricing' ? <PricingFileForm onDone={() => onOpenChange(false)} /> : <MaterialsForm onDone={() => onOpenChange(false)} />)}
+      {open && tab === 'pricing' && <PricingFileForm onDone={() => onOpenChange(false)} />}
+      {open && tab === 'materials' && <MaterialsForm onDone={() => onOpenChange(false)} />}
+      {open && tab === 'website' && <WebsiteLinkForm onDone={() => onOpenChange(false)} />}
     </Dialog>
   )
 }
+
+const TAB_LABELS: Record<SettingsTab, string> = { pricing: 'Pricing', materials: 'Material codes', website: 'Website link' }
 
 const dateTime = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
@@ -219,6 +225,116 @@ function MaterialsForm({ onDone }: { onDone: () => void }) {
             Save
           </Button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Links products to their page on the brand website. The buyer pastes the
+ * address of any product page or search; the ref no in it becomes a
+ * placeholder, so the app never needs to know how the website is built.
+ */
+function WebsiteLinkForm({ onDone }: { onDone: () => void }) {
+  const template = useSettings((s) => s.settings.productLink)
+  const update = useSettings((s) => s.update)
+  const index = useWorkspace((s) => s.index)
+  const [draft, setDraft] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  const styleCol = index?.roles.style ? index.byId.get(index.roles.style) : undefined
+  const parts = (r: number) => ({
+    key: index!.keys[r],
+    style: styleCol?.values[r] != null ? String(styleCol.values[r]) : null,
+    code: colourCode(index!, r),
+  })
+  const sample = index && index.rowCount > 0 ? parts(0) : null
+  const sampleLink = sample ? productLink(template, sample) : null
+
+  const save = async () => {
+    setError(null)
+    const examples = index ? Array.from({ length: index.rowCount }, (_, r) => parts(r)) : []
+    const next = toLinkTemplate(draft, examples)
+    if (!next) {
+      setError(
+        index
+          ? 'No ref no from this line list was found in that link. Search the website for a ref no such as ' + (sample?.key ?? '') + ', then copy the address.'
+          : 'Open a line list first, or write {key} where the ref no goes.',
+      )
+      return
+    }
+    await update({ productLink: next })
+    setDraft('')
+    toast.success(`Products now link to ${linkHost(next)}`)
+  }
+
+  return (
+    <div className="space-y-5 p-6">
+      <p className="text-sm text-muted">
+        Open any product on the brand website from its detail view, to see its real colour and photos. On the website, search for a ref no
+        {sample && (
+          <>
+            {' '}
+            (for example <b className="text-fg tabular">{sample.key}</b>)
+          </>
+        )}
+        , copy the address from the browser and paste it here. Each product then gets its own link.
+      </p>
+
+      {template && (
+        <div className="rounded-xl border border-line p-4">
+          <div className="flex items-start gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-ok">
+              <Globe className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">Products link to {linkHost(template)}</p>
+              <p className="mt-0.5 truncate text-xs text-muted" title={template}>
+                {template}
+              </p>
+              {sampleLink && (
+                <a href={sampleLink} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
+                  <ExternalLink className="size-3" /> Try it with {sample?.key}
+                </a>
+              )}
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => void update({ productLink: null })}>
+              <Trash2 /> Remove
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          void save()
+        }}
+        className="space-y-2"
+      >
+        <label htmlFor="product-link" className="text-sm font-medium">
+          {template ? 'Replace with another link' : 'Website link'}
+        </label>
+        <div className="flex gap-2">
+          <Input
+            id="product-link"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="https://www.brand-website.com/search?q=2200001-123"
+            className="flex-1"
+          />
+          <Button type="submit" variant="primary" disabled={!draft.trim()}>
+            Save
+          </Button>
+        </div>
+        {error && <p className="text-xs text-danger">{error}</p>}
+        <p className="text-[11px] text-subtle">Saved on this device. Advanced: write {'{key}'}, {'{style}'} or {'{code}'} (colour code) where they belong.</p>
+      </form>
+
+      <div className="flex justify-end">
+        <Button variant="ghost" onClick={onDone}>
+          Close
+        </Button>
       </div>
     </div>
   )

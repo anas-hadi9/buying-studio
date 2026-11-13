@@ -1,4 +1,4 @@
-import { FileLock2, FileSpreadsheet, X } from 'lucide-react'
+import { ArrowLeft, FileLock2, FileSpreadsheet, X } from 'lucide-react'
 import { Tooltip } from '@/components/ui/primitives'
 import type { CatalogIndex } from '@/domain/catalog/buildIndex'
 import { formatNumber } from '@/domain/catalog/format'
@@ -37,6 +37,8 @@ export function ResultsBar({ index, matchCount, styleCount, onExport }: ResultsB
   const setSearch = useWorkspace((s) => s.setSearch)
   const setSelectedOnly = useWorkspace((s) => s.setSelectedOnly)
   const clearFilters = useWorkspace((s) => s.clearFilters)
+  const stashedView = useWorkspace((s) => s.stashedView)
+  const restoreView = useWorkspace((s) => s.restoreView)
   const openSettings = useUi((s) => s.openSettings)
 
   const active = Object.entries(filters).filter(([id, f]) => isFilterActive(f) && index.byId.has(id))
@@ -75,6 +77,15 @@ export function ResultsBar({ index, matchCount, styleCount, onExport }: ResultsB
           </Tooltip>
         )}
       </div>
+      {stashedView && (
+        <button
+          type="button"
+          onClick={restoreView}
+          className="ml-1 inline-flex items-center gap-1 rounded-full bg-ink px-2.5 py-1 text-xs font-medium text-ink-fg hover:opacity-90"
+        >
+          <ArrowLeft className="size-3.5" /> Back to your filters
+        </button>
+      )}
       {(active.length > 0 || search) && (
         <button type="button" onClick={clearFilters} className="ml-1 text-xs font-medium text-muted underline-offset-4 hover:text-fg hover:underline">
           Clear all

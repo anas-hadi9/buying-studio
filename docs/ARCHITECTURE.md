@@ -183,6 +183,7 @@ buying files and are git-ignored.
 | Notes / comments / ratings | Repositories keyed by `lineListId + productKey`; panels in the detail dialog and board cards. | Small each |
 | Buy quantities, OTB budget, margin | `domain/buying/` (pure, tested) + quantity inputs on board cards; totals already flow through `summarize()`. Needs quantity/budget data the file lacks. | Medium |
 | Size-level buying | Join the `Barcodes` sheet on Item No at import (second sheet in the wizard). | Medium |
+| Colourways | **Built:** products sharing the style role are colours of one style (`domain/catalog/colourways.ts`); approximate swatches from colour names (`domain/colours.ts`); a brand-website link learned from one pasted example address (`domain/productLink.ts`). The website itself isn't read: it blocks automated access, and the link opens in the buyer's own browser. | — |
 | Excel export | **Built:** the products shown (filters, search and sort applied), the selection, one collection or all collections. Every column, calculated prices as plain numbers, clickable photo links; collections add a summary sheet. Our own small writer on `fflate` (no library offered links + filters + frozen headers). | — |
 | Photos in Excel / PDF line sheets | Embed resized photos in the Excel export (the image host allows cross-origin reads), or a print stylesheet / PDF for line sheets. | Small–medium |
 | Purchase orders, approval workflow | Needs the backend (state machine, audit trail). | Large |

@@ -1,16 +1,20 @@
-import { Check, ChevronLeft, ChevronRight, ExternalLink, FolderPlus, Sparkles, X } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, ExternalLink, FolderPlus, Globe, LayoutGrid, Sparkles, X } from 'lucide-react'
 import { Dialog as RadixDialog } from 'radix-ui'
 import { useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge, Kbd, Tooltip } from '@/components/ui/primitives'
 import type { CatalogIndex } from '@/domain/catalog/buildIndex'
+import { colourCode, colourwayRows, styleFilter } from '@/domain/catalog/colourways'
 import { formatCell } from '@/domain/catalog/format'
+import { linkHost, productLink } from '@/domain/productLink'
 import { AddToCollectionMenu } from '@/features/collections/AddToCollectionMenu'
 import { productTitle, roleText } from '@/features/catalog/useCatalogView'
 import { cn } from '@/lib/cn'
+import { useSettings } from '@/stores/settings'
 import { useUi } from '@/stores/ui'
 import { useWorkspace } from '@/stores/workspace'
-import { preloadImage } from './ProductImage'
+import { ColourSwatch } from './ColourSwatch'
+import { ProductImage, preloadImage } from './ProductImage'
 import { ZoomableImage } from './ZoomableImage'
 
 export function ProductDetailDialog({ index }: { index: CatalogIndex }) {
@@ -57,11 +61,15 @@ function DetailBody({ index, row, position, total, onStep }: { index: CatalogInd
   const toggleSelected = useWorkspace((s) => s.toggleSelected)
   const collections = useWorkspace((s) => s.collections)
   const openSettings = useUi((s) => s.openSettings)
+  const linkTemplate = useSettings((s) => s.settings.productLink)
   const key = index.keys[row]
   const title = productTitle(index, row)
   const image = roleText(index, 'image', row) || null
   const selected = selection.has(key)
   const inCollections = collections.filter((c) => c.groups.some((g) => g.itemKeys.includes(key)))
+  const style = roleText(index, 'style', row)
+  const code = colourCode(index, row)
+  const websiteLink = productLink(linkTemplate, { key, style, code })
 
   const chips = [roleText(index, 'gender', row), roleText(index, 'line', row), roleText(index, 'category', row), roleText(index, 'material', row)].filter(Boolean)
   // Headline price fields from the pricing file, then the PSF column.
@@ -110,7 +118,13 @@ function DetailBody({ index, row, position, total, onStep }: { index: CatalogInd
             <RadixDialog.Title className="mt-1 font-display text-[32px] leading-[1.05] tracking-tight">{title}</RadixDialog.Title>
             <RadixDialog.Description className="sr-only">Product details for {title}</RadixDialog.Description>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {roleText(index, 'color', row) && <Badge tone="ink">{roleText(index, 'color', row)}</Badge>}
+              {roleText(index, 'color', row) && (
+                <Badge tone="ink">
+                  <ColourSwatch name={roleText(index, 'color', row)} className="mr-1.5 ring-white/40" />
+                  {roleText(index, 'color', row)}
+                  {code && <span className="ml-1 opacity-60 tabular">{code}</span>}
+                </Badge>
+              )}
               {[...new Set(chips)].map((c) => (
                 <Badge key={c}>{c}</Badge>
               ))}
@@ -122,6 +136,7 @@ function DetailBody({ index, row, position, total, onStep }: { index: CatalogInd
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-6 py-5 md:px-8">
+          <Colourways index={index} row={row} />
           {priceTiles.length > 0 && (
             <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line" style={{ gridTemplateColumns: `repeat(${priceTiles.length}, minmax(0, 1fr))` }}>
               {priceTiles.map((c, i) => (
@@ -153,6 +168,11 @@ function DetailBody({ index, row, position, total, onStep }: { index: CatalogInd
                 </Button>
               }
             />
+            {websiteLink && linkTemplate && (
+              <Button variant="outline" onClick={() => window.open(websiteLink, '_blank', 'noopener,noreferrer')}>
+                <Globe /> View on {linkHost(linkTemplate)}
+              </Button>
+            )}
             {image && (
               <Button variant="ghost" onClick={() => window.open(image, '_blank', 'noopener,noreferrer')}>
                 <ExternalLink /> Original image
@@ -163,6 +183,11 @@ function DetailBody({ index, row, position, total, onStep }: { index: CatalogInd
               <Kbd>→</Kbd> to browse
             </span>
           </div>
+          {!linkTemplate && (
+            <button type="button" onClick={() => openSettings('website')} className="mt-2 text-xs font-medium text-muted hover:text-fg hover:underline">
+              Link products to the brand website…
+            </button>
+          )}
           {inCollections.length > 0 && (
             <p className="mt-3 text-xs text-muted">
               In {inCollections.map((c) => `“${c.name}”`).join(', ')}
@@ -200,6 +225,67 @@ function DetailBody({ index, row, position, total, onStep }: { index: CatalogInd
         </div>
       </div>
     </>
+  )
+}
+
+/** Every colour of this product's style; click one to view it, or show them all in the catalogue. */
+function Colourways({ index, row }: { index: CatalogIndex; row: number }) {
+  const showInDetail = useWorkspace((s) => s.showInDetail)
+  const closeDetail = useWorkspace((s) => s.closeDetail)
+  const focusOn = useWorkspace((s) => s.focusOn)
+  const rows = colourwayRows(index, row)
+  if (rows.length < 2) return null
+  const target = styleFilter(index, row)
+
+  return (
+    <section className="mb-5" aria-label="Colours">
+      <div className="mb-2 flex items-center gap-2">
+        <h3 className="text-[11px] font-medium tracking-[0.14em] text-subtle uppercase">Colours · {rows.length}</h3>
+        {target && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto"
+            onClick={() => {
+              closeDetail()
+              focusOn(target.columnId, target.filter)
+            }}
+          >
+            <LayoutGrid /> Show all {rows.length} colours
+          </Button>
+        )}
+      </div>
+      <ul className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        {rows.map((r) => {
+          const current = r === row
+          const colour = roleText(index, 'color', r)
+          const c = colourCode(index, r)
+          return (
+            <li key={r} className="w-[84px] shrink-0">
+              <button
+                type="button"
+                onClick={() => showInDetail(index.keys[r])}
+                aria-current={current}
+                aria-label={`${colour || index.keys[r]}${c ? ` ${c}` : ''}`}
+                className={cn(
+                  'block w-full overflow-hidden rounded-lg border text-left transition-colors',
+                  current ? 'border-ink ring-1 ring-ink' : 'border-line hover:border-line-strong',
+                )}
+              >
+                <ProductImage src={roleText(index, 'image', r) || null} alt="" compact className="aspect-[4/5] w-full" imgClassName="p-[6%]" />
+                <span className="flex items-center gap-1 px-1.5 pt-1 text-[11px] font-medium">
+                  <ColourSwatch name={colour} />
+                  <span className="truncate" title={colour}>
+                    {colour || '—'}
+                  </span>
+                </span>
+                <span className="block px-1.5 pb-1 text-[10px] text-subtle tabular">{c ?? index.keys[r]}</span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
   )
 }
 

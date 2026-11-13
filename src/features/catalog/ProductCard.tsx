@@ -2,10 +2,13 @@ import { useDraggable } from '@dnd-kit/core'
 import { Check, FolderCheck, FolderPlus } from 'lucide-react'
 import { memo } from 'react'
 import type { CatalogIndex } from '@/domain/catalog/buildIndex'
+import { colourwayRows, styleFilter } from '@/domain/catalog/colourways'
 import { AddToCollectionMenu } from '@/features/collections/AddToCollectionMenu'
+import { ColourSwatch } from '@/features/product/ColourSwatch'
 import { ProductImage } from '@/features/product/ProductImage'
 import { cn } from '@/lib/cn'
 import type { CardSize } from '@/stores/preferences'
+import { useWorkspace } from '@/stores/workspace'
 import { moneyFormatter, productTitle, roleNumber, roleText } from './useCatalogView'
 
 export const CARD_INFO_HEIGHT: Record<CardSize, number> = { s: 96, m: 112, l: 120 }
@@ -64,7 +67,7 @@ export const ProductCard = memo(function ProductCard({ index, row, size, selecte
         aria-label={`Open ${title}, ${key}`}
         className="absolute inset-0 z-0 cursor-pointer outline-none"
       />
-      <div className="pointer-events-none relative aspect-[4/5] w-full">
+      <div className="pointer-events-none relative aspect-[4/5] w-full shrink-0 overflow-hidden">
         <ProductImage src={image} alt={title} className="size-full" imgClassName="p-[6%] transition-transform duration-500 group-hover:scale-[1.03]" />
 
         <button
@@ -114,6 +117,7 @@ export const ProductCard = memo(function ProductCard({ index, row, size, selecte
           {style && <span className="font-medium text-muted">{style}</span>}
           {style && <span>·</span>}
           <span className="truncate">{key}</span>
+          <ColoursButton index={index} row={row} compact={size === 's'} />
         </div>
         <h3 className={cn('mt-0.5 truncate font-medium', size === 's' ? 'text-[13px]' : 'text-sm')} title={title}>
           {title}
@@ -123,6 +127,7 @@ export const ProductCard = memo(function ProductCard({ index, row, size, selecte
           {color && (
             <>
               {uniqueMeta.length > 0 && ' · '}
+              <ColourSwatch name={color} className="mr-1 -mb-px size-2" />
               <span className="text-fg/80">{color}</span>
             </>
           )}
@@ -141,3 +146,35 @@ export const ProductCard = memo(function ProductCard({ index, row, size, selecte
     </div>
   )
 })
+
+const MAX_DOTS = 5
+
+/** "●●● 3 colours" on cards whose style comes in several colours; shows them all in the catalogue. */
+function ColoursButton({ index, row, compact }: { index: CatalogIndex; row: number; compact: boolean }) {
+  const focusOn = useWorkspace((s) => s.focusOn)
+  const rows = colourwayRows(index, row)
+  if (rows.length < 2) return null
+  const colour = (r: number) => roleText(index, 'color', r)
+  const target = styleFilter(index, row)
+  return (
+    <button
+      type="button"
+      disabled={!target}
+      title={`Comes in ${rows.length} colours: ${rows.map(colour).filter(Boolean).join(', ')}. Click to show them all.`}
+      aria-label={`Show all ${rows.length} colours`}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (target) focusOn(target.columnId, target.filter)
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="pointer-events-auto relative z-10 -my-0.5 ml-auto inline-flex shrink-0 items-center gap-1 rounded-full py-0.5 pr-1.5 pl-1 text-[11px] font-medium text-muted hover:bg-surface-2 hover:text-fg"
+    >
+      <span className="flex -space-x-0.5">
+        {rows.slice(0, MAX_DOTS).map((r) => (
+          <ColourSwatch key={r} name={colour(r)} className="size-2.5" />
+        ))}
+      </span>
+      {compact ? rows.length : `${rows.length} colours`}
+    </button>
+  )
+}

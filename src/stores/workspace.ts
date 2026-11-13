@@ -28,6 +28,8 @@ interface WorkspaceState {
   collections: Collection[]
   presets: FilterPreset[]
   detail: DetailContext | null
+  /** Filters and search set aside by "Show all colours", restored by `restoreView`. */
+  stashedView: Pick<ViewState, 'filters' | 'search'> | null
 
   open: (lineListId: string) => Promise<void>
   /** Forget the open line list (e.g. after it was deleted). */
@@ -41,6 +43,10 @@ interface WorkspaceState {
   setGroupBy: (groupBy: string[]) => void
   toggleGroup: (groupId: string) => void
   setSelectedOnly: (on: boolean) => void
+  /** Shows only the products matching one filter (e.g. every colour of a style), setting the current filters aside. */
+  focusOn: (columnId: string, filter: ColumnFilter) => void
+  /** Brings back the filters set aside by `focusOn`. */
+  restoreView: () => void
 
   toggleSelected: (key: string) => void
   select: (keys: string[]) => void
@@ -60,6 +66,8 @@ interface WorkspaceState {
 
   openDetail: (keys: string[], key: string) => void
   stepDetail: (delta: number) => void
+  /** Shows `key` in the open detail view, adding it after the current product if it isn't in the list. */
+  showInDetail: (key: string) => void
   closeDetail: () => void
 }
 
@@ -116,10 +124,11 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
     collections: [],
     presets: [],
     detail: null,
+    stashedView: null,
 
     async open(lineListId) {
       if (get().lineList?.id === lineListId && get().status === 'ready') return
-      set({ status: 'loading', detail: null })
+      set({ status: 'loading', detail: null, stashedView: null })
       const repos = getRepositories()
       await useSettings.getState().load()
       const [lineList, selected, collections, presets] = await Promise.all([
@@ -150,7 +159,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
     },
 
     close() {
-      set({ status: 'idle', lineList: null, index: null, collections: [], selection: new Set(), detail: null })
+      set({ status: 'idle', lineList: null, index: null, collections: [], selection: new Set(), detail: null, stashedView: null })
     },
 
     rebuildIndex() {
@@ -166,7 +175,21 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
       else delete filters[columnId]
       updateView({ filters })
     },
-    clearFilters: () => updateView({ filters: {}, search: '' }),
+    clearFilters: () => {
+      set({ stashedView: null })
+      updateView({ filters: {}, search: '' })
+    },
+    focusOn(columnId, filter) {
+      const { view, stashedView } = get()
+      set({ stashedView: stashedView ?? { filters: view.filters, search: view.search }, selectedOnly: false })
+      updateView({ filters: { [columnId]: filter }, search: '' })
+    },
+    restoreView() {
+      const { stashedView } = get()
+      if (!stashedView) return
+      set({ stashedView: null })
+      updateView(stashedView)
+    },
     setSort: (sort) => updateView({ sort }),
     setGroupBy: (groupBy) => {
       set({ collapsedGroups: new Set() })
@@ -270,11 +293,21 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => {
       const position = (detail.position + delta + detail.keys.length) % detail.keys.length
       set({ detail: { ...detail, position } })
     },
+    showInDetail(key) {
+      const { detail } = get()
+      if (!detail) return
+      const at = detail.keys.indexOf(key)
+      if (at >= 0) return set({ detail: { ...detail, position: at } })
+      const keys = [...detail.keys.slice(0, detail.position + 1), key, ...detail.keys.slice(detail.position + 1)]
+      set({ detail: { keys, position: detail.position + 1 } })
+    },
     closeDetail: () => set({ detail: null }),
   }
 })
 
 // Pricing and material settings feed derived columns; rebuild when they change.
 useSettings.subscribe((state, prev) => {
-  if (state.settings !== prev.settings) useWorkspace.getState().rebuildIndex()
+  const a = state.settings
+  const b = prev.settings
+  if (a.pricing !== b.pricing || a.materialNames !== b.materialNames) useWorkspace.getState().rebuildIndex()
 })

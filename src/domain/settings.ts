@@ -7,11 +7,14 @@ export interface AppSettings {
   pricing: PricingSettings
   /** Composition code → display name (e.g. CO → Cotton). */
   materialNames: Record<string, string>
+  /** Link to a product on the brand website, with {key}/{style}/{code} placeholders. */
+  productLink: string | null
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   pricing: EMPTY_PRICING,
   materialNames: DEFAULT_MATERIAL_NAMES,
+  productLink: null,
 }
 
 /**
@@ -24,5 +27,6 @@ export function withDefaults(saved: Partial<AppSettings> | undefined): AppSettin
   return {
     pricing: { ...EMPTY_PRICING, ...pricing },
     materialNames: saved?.materialNames ?? DEFAULT_MATERIAL_NAMES,
+    productLink: typeof saved?.productLink === 'string' ? saved.productLink : null,
   }
 }

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type SettingsTab = 'pricing' | 'materials'
+export type SettingsTab = 'pricing' | 'materials' | 'website'
 
 /** Transient UI state shared across features (not persisted). */
 interface UiState {

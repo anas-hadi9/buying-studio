@@ -269,7 +269,7 @@ function Photo({ src, alt, className, imgClassName, compact, eager }: ProductIma
             }
           }}
           className={cn(
-            'size-full object-contain mix-blend-multiply transition-opacity duration-300',
+            'absolute inset-0 size-full object-contain mix-blend-multiply transition-opacity duration-300',
             phase === 'loaded' ? 'opacity-100' : 'opacity-0',
             imgClassName,
           )}

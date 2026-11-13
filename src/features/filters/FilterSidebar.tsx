@@ -148,17 +148,33 @@ function ValuesFacet({ col, counts, selected }: { col: IndexedColumn; counts?: I
     const next = on ? [...selected, key] : selected.filter((k) => k !== key)
     setFilter(col.def.id, next.length ? { type: 'values', keys: next } : null)
   }
+  const only = (key: string) => setFilter(col.def.id, { type: 'values', keys: [key] })
+
+  // "Select all" works on the values listed: all of them, or those matching the search.
+  const listedSelected = values.filter((v) => selectedSet.has(v.key)).length
+  const allState = listedSelected === 0 ? false : listedSelected === values.length ? true : 'indeterminate'
+  const toggleAll = (on: boolean) => {
+    const listed = new Set(values.map((v) => v.key))
+    const next = on ? [...selected, ...values.filter((v) => !selectedSet.has(v.key)).map((v) => v.key)] : selected.filter((k) => !listed.has(k))
+    setFilter(col.def.id, next.length ? { type: 'values', keys: next } : null)
+  }
 
   return (
     <div>
       {col.dict.length > VISIBLE_VALUES && (
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${col.dict.length} values…`} className="mb-2 h-8 text-[13px]" />
       )}
+      {values.length > 1 && (
+        <label className="flex cursor-pointer items-center gap-2.5 rounded-md px-1.5 py-1 text-[13px] text-muted hover:bg-surface-2 hover:text-fg">
+          <Checkbox checked={allState} onCheckedChange={toggleAll} />
+          <span className="flex-1 truncate">{q ? `Select all ${values.length} matching` : 'Select all'}</span>
+        </label>
+      )}
       <ul className={cn('space-y-px', (showAll || q) && 'max-h-72 overflow-auto pr-1')}>
         {visible.map((v) => {
           const checked = selectedSet.has(v.key)
           return (
-            <li key={v.key}>
+            <li key={v.key} className="group/value relative">
               <label
                 className={cn(
                   'flex cursor-pointer items-center gap-2.5 rounded-md px-1.5 py-1 text-[13px] hover:bg-surface-2',
@@ -169,8 +185,16 @@ function ValuesFacet({ col, counts, selected }: { col: IndexedColumn; counts?: I
                 <span className={cn('flex-1 truncate', v.key.startsWith('\u0000') && 'text-muted italic')} title={v.label}>
                   {v.label}
                 </span>
-                <span className="text-xs text-subtle tabular">{v.count.toLocaleString('en-GB')}</span>
+                <span className="text-xs text-subtle tabular group-focus-within/value:invisible group-hover/value:invisible">{v.count.toLocaleString('en-GB')}</span>
               </label>
+              <button
+                type="button"
+                onClick={() => only(v.key)}
+                aria-label={`Only ${v.label}`}
+                className="absolute top-1/2 right-1 -translate-y-1/2 rounded px-1.5 py-0.5 text-[11px] font-medium text-muted opacity-0 group-focus-within/value:opacity-100 group-hover/value:opacity-100 hover:bg-surface-3 hover:text-fg focus-visible:opacity-100"
+              >
+                Only
+              </button>
             </li>
           )
         })}
