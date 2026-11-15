@@ -228,7 +228,7 @@ You asked me to flag over-engineering:
 
 `npm run build` writes static files to `dist/`. Host them on any static web server and
 configure it to fall back to `index.html` for unknown paths (client-side routing). Set
-`BASE_PATH` (e.g. `/buying-studio/`) when the app is served from a sub-folder.
+`BASE_PATH` (e.g. `/buying-studio/`) when the app is served from a sub-folder. The Pages workflow sets it from the repository name, or `/` for a repository named `<user>.github.io` (served at the site root).
 
 - **GitHub Pages:** `.github/workflows/deploy-pages.yml` checks, builds and publishes on every
   push to `main` (one-time setup: Settings → Pages → Source: GitHub Actions). Pages sites are
